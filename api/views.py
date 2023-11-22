@@ -9,8 +9,8 @@ from rest_framework import (
     generics
 )
 from rest_framework_simplejwt import authentication as authenticationJWT
-from serializers import UsuarioSerializer
-from permissions import IsCreationOrIsAuthenticated
+from .serializers import UsuarioSerializer
+from .permissions import IsCreationOrIsAuthenticated
 
 class CreateUserView(generics.CreateAPIView):
     serializer_class = UsuarioSerializer

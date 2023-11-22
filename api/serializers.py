@@ -10,13 +10,14 @@ class EnderecoSerializer(serializers.ModelSerializer):
         fields = '__all__'
         many = True
 
+
 class UsuarioSerializer(serializers.ModelSerializer):
     class Meta:
         model = Usuario
-        fields = '__all__'
+        fields = ['email', 'password', 'nome_sobrenome', 'cpf', 'created_at']
         many = True
         extra_kwargs = {
-            'senha': {'write_only': True},
+            'password': {'write_only': True},
             'is_active': {'read_only': True},
             'created_at': {'read_only': True},
         }
@@ -41,11 +42,13 @@ class ClientePfSerializer(serializers.ModelSerializer):
         fields = '__all__'
         many = True
 
+
 class ClientePjSerializer(serializers.ModelSerializer):
     class Meta:
         model = ClientePj
         fields = '__all__'
         many = True
+
 
 class ContatoSerializer(serializers.ModelSerializer):
     class Meta:
@@ -53,11 +56,13 @@ class ContatoSerializer(serializers.ModelSerializer):
         fields = '__all__'
         many = True
 
+
 class ContaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Conta
         fields = '__all__'
         many = True
+
 
 class CartaoSerializer(serializers.ModelSerializer):
     class Meta:
@@ -65,11 +70,13 @@ class CartaoSerializer(serializers.ModelSerializer):
         fields = '__all__'
         many = True
 
+
 class MovimentacaoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Movimentacao
         fields = '__all__'
         many = True
+
 
 class EmprestimoSerializer(serializers.ModelSerializer):
     class Meta:
@@ -77,11 +84,13 @@ class EmprestimoSerializer(serializers.ModelSerializer):
         fields = '__all__'
         many = True
 
+
 class InvestimentoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Investimento
         fields = '__all__'
         many = True
+
 
 class TransferenciaSerializer(serializers.ModelSerializer):
     class Meta:

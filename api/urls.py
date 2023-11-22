@@ -1,8 +1,9 @@
 from django.urls import path
-import views
+from . import views
+
 app_name = 'api'
 
-url_patterns = [
+urlpatterns = [
     path('create', views.CreateUserView.as_view(), name='create'),
     path('me/', views.ManagerUserAPiView.as_view(), name='me')
 ]
