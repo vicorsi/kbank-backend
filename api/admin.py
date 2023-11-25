@@ -1,14 +1,15 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.translation import gettext_lazy as _
+
 from api import models
 
 class UserAdmin(BaseUserAdmin):
     ordering = ['id']
-    list_display = ['id', 'custom_nome_sobrenome', 'cpf']
+    list_display = ['id', 'first_name', 'last_name', 'cpf']
     fieldsets = (
-        (None, {'fields': ('email', 'senha',)}),
-        (_('Informações Pessoais'), {'fields': ('nome_sobrenome', 'cpf',)}),
+        (None, {'fields': ('email', 'password',)}),
+        (_('Personal info'), {'fields': ('first_name', 'last_name', 'cpf', 'url_image',)}),
         (
             _('Permissions'),
             {
@@ -19,24 +20,21 @@ class UserAdmin(BaseUserAdmin):
                 )
             }
         ),
-        (_('Datas'), {'fields': ('created_at',)}),
+        (_('Important dates'), {'fields': ('created_at',)})
     )
-    readonly_fields = ['created_at']
-    filter_horizontal = []  # Remova ou adicione os campos corretos aqui
-
-    list_filter = (
-        'is_active',
-        'is_staff',
-    )
+    readonly_fields = ['last_login',  'created_at']
 
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
             'fields': (
+                'first_name',
+                'last_name',
+                'cpf',
+                'url_image',
                 'email',
                 'password1',
                 'password2',
-                'custom_nome_sobrenome',
                 'is_active',
                 'is_staff',
                 'is_superuser'
@@ -44,10 +42,5 @@ class UserAdmin(BaseUserAdmin):
         }),
     )
 
-    def custom_nome_sobrenome(self, obj):
-        return obj.nome_sobrenome
-
-    custom_nome_sobrenome.admin_order_field = 'nome_sobrenome'
-    custom_nome_sobrenome.short_description = 'Nome e Sobrenome'
 
 admin.site.register(models.Usuario, UserAdmin)

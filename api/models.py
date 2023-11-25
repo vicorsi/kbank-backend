@@ -1,51 +1,49 @@
+import os
+import uuid
+from django.conf import settings
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin, Group, Permission
 from django.db import models
-from django.contrib.auth.models import (
-    AbstractBaseUser,
-    BaseUserManager,
-    PermissionsMixin,
-)
-
 from django.utils import timezone
 
-class UserManager(BaseUserManager):
+def user_image_field(instace, filename):
+    ext = os.path.splitext(filename)[1]
+    filename = f'{uuid.uuid4()}{ext}'
 
-    def created_user(self, email, password=None, **extra_fields):
+    return os.path.join('uploads', 'avatar', filename)
+
+class UsuarioManager(BaseUserManager):
+    def create_user(self, email, password=None, **extra_fiels):
         if not email:
-            raise ValueError("Usuário precisa de um email")
+            raise ValueError("O usuário precisa de um e-mail")
 
-        user = self.model(email=self.normalize_email(email), **extra_fields)
+        user = self.model(email=self.normalize_email(email), **extra_fiels)
         user.set_password(password)
         user.save()
 
         return user
 
-    def created_superuser(self, email, password):
-        user = self.create_user(email, password)
-        user.is_staff = True
-        user.is_superuser = True
-        user.save(using=self._db)
+    def create_superuser(self, email, password=None, **extra_fields):
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
 
-        return user
+        return self.create_user(email, password, **extra_fields)
 
-
-class Usuario(models.Model):
-    nome_sobrenome = models.CharField(max_length=20, blank=False, null=False)
-    data_nascimento = models.DateField(null=False, blank=False)
-    email = models.EmailField(blank=False, null=False)
-    cpf = models.CharField(max_length=11, unique=True, null=False)
+class Usuario(AbstractBaseUser, PermissionsMixin):
+    email = models.EmailField(max_length=255, unique=True)
+    first_name = models.CharField(max_length=255, null=False)
+    last_name = models.CharField(max_length=255, null=False)
+    cpf = models.CharField(max_length=11, unique=True)
+    url_image = models.ImageField(null=True, upload_to=user_image_field)
     is_active = models.BooleanField(default=True)
-    # url_imagem = models.ImageField(null=True, upload_to=user_image_field)
-    senha = models.CharField(max_length=10, blank=False, null=False)
     is_staff = models.BooleanField(default=False)
     created_at = models.DateTimeField(default=timezone.now)
 
-    objects = UserManager()
+    objects = UsuarioManager()
 
     USERNAME_FIELD = 'email'
 
     def __str__(self) -> str:
-        return self.nome_sobrenome
-
+        return f'{self.first_name} {self.last_name}'
 
 class Endereco(models.Model):
     id = models.AutoField(primary_key=True)
@@ -67,27 +65,26 @@ class ClientePf(models.Model):
 
 class ClientePj(models.Model):
     id = models.AutoField(primary_key=True)
-    cliente_pj_id = models.ForeignKey(Usuario, on_delete=models.CASCADE)
+    cliente_pj_id = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     cliente_cnpj = models.CharField(max_length=25, blank=False, null=False)
     inscricao_estadual = models.CharField(max_length=11, blank=True)
 
 
 class Contato(models.Model):
     id = models.AutoField(primary_key=True)
-    cliente_id = models.ForeignKey(Usuario, on_delete=models.CASCADE)
+    cliente_id = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     contato_numero = models.CharField(max_length=15, blank=False, null=False, unique=True)
     contato_email = models.EmailField(max_length=50, blank=False, null=False, unique=True)
 
 
 class Conta(models.Model):
     id = models.AutoField(primary_key=True)
-    cliente_id = models.ForeignKey(Usuario, on_delete=models.CASCADE)
-    conta_agencia = models.CharField(max_length=5, blank=False, null=False, default=9090)
-    conta_numero = models.CharField(max_length=20, blank=False, null=False, unique=True)
+    cliente_id = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    conta_agencia = models.CharField(max_length=4, blank=False, null=False, default=9090)
+    conta_numero = models.CharField(max_length=8, blank=False, null=False, unique=True)
     conta_tipo = models.CharField(max_length=20, blank=False, null=False, default='Standart')
-    conta_limite = models.FloatField(max_length=20)
     conta_saldo = models.FloatField(max_length=20, default=0.00, null=False, blank=False)
-    conta_ativa = models.BooleanField(default=True)
+    created_at = models.DateField(default=timezone.now)
 
     def __str__(self) -> str:
         return str(self.cliente_id)
@@ -116,7 +113,7 @@ class Transferencia(models.Model):
 
 class Movimentacao(models.Model):
     id = models.AutoField(primary_key=True)
-    conta_id = models.ForeignKey(Conta, on_delete=models.CASCADE, null=True, blank=True)
+    conta_id = models.ForeignKey(Conta, on_delete=models.CASCADE)
     transferencia = models.ForeignKey(Transferencia, on_delete=models.CASCADE)
     movimentacao_valor = models.FloatField()
     movimentacao_observacao = models.TextField(max_length=100)

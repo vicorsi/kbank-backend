@@ -12,27 +12,27 @@ class EnderecoSerializer(serializers.ModelSerializer):
 
 
 class UsuarioSerializer(serializers.ModelSerializer):
+
     class Meta:
-        model = Usuario
-        fields = ['email', 'password', 'nome_sobrenome', 'cpf', 'created_at']
-        many = True
+        model = get_user_model()
+        fields = ['email', 'password', 'first_name', 'last_name', 'cpf', 'created_at', 'url_image']
         extra_kwargs = {
-            'password': {'write_only': True},
+            'password': {'write_only': True, 'min_length': 6},
             'is_active': {'read_only': True},
             'created_at': {'read_only': True},
         }
-    
+
     def create(self, validated_data):
-        return get_user_model().objects.created_user(**validated_data)
-    
+        return get_user_model().objects.create_user(**validated_data)
+
     def updated(self, instance, validated_data):
         password = validated_data.pop('password', None)
-        user - super().update(instance, validated_data)
-
+        user = super().update(instance, validated_data)
+        
         if password:
             user.set_password(password)
             user.save()
-        
+
         return user
 
 
@@ -60,8 +60,14 @@ class ContatoSerializer(serializers.ModelSerializer):
 class ContaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Conta
-        fields = '__all__'
-        many = True
+        fields = ['conta_agencia', 'conta_numero',]
+        read_only_fields = ['conta_agencia', 'conta_numero',]
+
+
+class ContaDetailSerializer(serializers.ModelSerializer):
+    class Meta(ContaSerializer.Meta):   
+        fields = ['id', 'conta_saldo', 'conta_tipo', 'created_at',]
+        read_only_fields = ContaSerializer.Meta.read_only_fields + ['id', 'conta_saldo', 'conta_tipo', 'created_at',]
 
 
 class CartaoSerializer(serializers.ModelSerializer):
