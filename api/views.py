@@ -95,13 +95,50 @@ class ContaView(ModelViewSet):
                 numero = numero,
                 agencia = agencia,
             )
+
+            conta.saldo = decimal.Decimal(0)
             conta.save()
 
-            serialized_conta = self.serializer_class(conta)
 
-            return Response({conta}, status=status.HTTP_201_CREATED)
+            return Response({'message': 'created'}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(methods=['POST'], detail=True, url_path='sacar')
+    def sacar(self, request, pk=None):
+        conta = Conta.objects.filter(id=pk).first()
 
+        serializer_recebido = serializers.SaqueSerializer(data=request.data)
+        if serializer_recebido.is_valid() and conta:
+            valor_saque = decimal.Decimal(serializer_recebido.validated.data.get('value'))
+            saldo = decimal.Decimal(conta.saldo)
+
+            cmp = saldo.compare(valor_saque)
+
+            if cmp == 0 or cmp == 1:
+                new_value = 0 if saldo - valor_saque <= 0 else saldo - valor_saque
+
+                conta.saldo = new_value
+
+                conta.save()
+
+                return Response({"saldo": conta.saldo}, status=status.HTTP_201_OK)
+            return Response({'message': "Saldo insufficient"}, status=status.HTTP_403_FORBIDDEN)
+        return Response(serializer_recebido.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+    @action(methods=['POST'], detail=True, url_path='depositar')
+    def depositar(self, request, pk=None):
+        conta = Conta.objects.filter(id=pk).first()
+        serializer_recebido = serializers.DepositoSerializer(data=request.data)
+
+        if serializer_recebido.is_valid() and conta:
+            valor_depositado = decimal.Decimal(serializer_recebido.validated_data.get('value'))
+            saldo = decimal.Decimal(conta.saldo)
+            conta.saldo = saldo + valor_depositado
+            conta.save()
+
+            return Response({"saldo": conta.saldo}, status=status_HTTP_200_OK)
+        return Response(serializer_recebido.errors, status=status_HTTP_400_BAD_REQUEST)
 
 class CartaoView(ModelViewSet):
     queryset = Cartao.objects.all()

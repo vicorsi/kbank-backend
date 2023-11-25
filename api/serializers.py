@@ -60,8 +60,8 @@ class ContatoSerializer(serializers.ModelSerializer):
 class ContaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Conta
-        fields = ['conta_agencia', 'conta_numero',]
-        read_only_fields = ['conta_agencia', 'conta_numero',]
+        fields = ['id', 'conta_agencia', 'conta_numero',]
+        read_only_fields = ['conta_numero',]
 
 
 class ContaDetailSerializer(serializers.ModelSerializer):
@@ -98,8 +98,15 @@ class InvestimentoSerializer(serializers.ModelSerializer):
         many = True
 
 
-class TransferenciaSerializer(serializers.ModelSerializer):
+class DepositoSerializer(serializers.Serializer):
+    value = serializers.DecimalField(decimal_places=2, max_digits=5)
+
     class Meta:
-        model = Transferencia
-        fields = '__all__'
-        many = True
+        fields = ['value']
+
+
+class SaqueSerializer(serializers.Serializer):
+    value = serializers.DecimalField(decimal_places=2, max_digits=5)
+
+    class Meta:
+        fields = ['value']

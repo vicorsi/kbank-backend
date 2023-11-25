@@ -87,7 +87,7 @@ class Conta(models.Model):
     created_at = models.DateField(default=timezone.now)
 
     def __str__(self) -> str:
-        return str(self.cliente_id)
+        return f'{self.conta_agencia} - {self.conta_numero}'
 
 
 class Cartao(models.Model):
