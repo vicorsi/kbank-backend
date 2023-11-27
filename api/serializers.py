@@ -60,8 +60,8 @@ class ContatoSerializer(serializers.ModelSerializer):
 class ContaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Conta
-        fields = ['id', 'conta_agencia', 'conta_numero',]
-        read_only_fields = ['conta_numero',]
+        fields = ['id', 'conta_agencia', 'conta_numero', 'conta_saldo', 'conta_tipo']
+        read_only_fields = ['conta_numero', 'conta_saldo']
 
 
 class ContaDetailSerializer(serializers.ModelSerializer):

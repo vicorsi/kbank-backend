@@ -3,6 +3,7 @@ from .models import *
 from .serializers import *
 
 from .serializers import SaqueSerializer
+from .serializers import DepositoSerializer
 
 import random
 import decimal
@@ -115,39 +116,42 @@ class ContaView(ModelViewSet):
     def sacar(self, request, pk=None):
         conta = Conta.objects.filter(id=pk).first()
 
-        serializer_recebido = SaqueSerializer(data=request.data)
-        if serializer_recebido.is_valid() and conta:
-            valor_saque = decimal.Decimal(serializer_recebido.validated_data.get('value'))
-            saldo = decimal.Decimal(conta.saldo)
+        if conta:
+            serializer_recebido = SaqueSerializer(data=request.data)
+            if serializer_recebido.is_valid():
+                valor_saque = decimal.Decimal(serializer_recebido.validated_data.get('value'))
+                saldo = decimal.Decimal(conta.conta_saldo)
 
-            cmp = saldo.compare(valor_saque)
+                if saldo >= valor_saque:
+                    novo_saldo = saldo - valor_saque
+                    conta.conta_saldo = novo_saldo
+                    conta.save()
 
-            if cmp == 0 or cmp == 1:
-                new_value = 0 if saldo - valor_saque <= 0 else saldo - valor_saque
+                    return Response({"saldo": conta.conta_saldo}, status=status.HTTP_200_OK)
+                else:
+                    return Response({'message': "Saldo insuficiente"}, status=status.HTTP_403_FORBIDDEN)
 
-                conta.saldo = new_value
-
-                conta.save()
-
-                return Response({"saldo": conta.saldo}, status=status.HTTP_201_OK)
-            return Response({'message': "Saldo insuficiente"}, status=status.HTTP_403_FORBIDDEN)
-        return Response(serializer_recebido.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    
-
+        return Response({'message': "Conta não encontrada"}, status=status.HTTP_404_NOT_FOUND)
+        
     @action(methods=['POST'], detail=True, url_path='depositar')
     def depositar(self, request, pk=None):
         conta = Conta.objects.filter(id=pk).first()
-        serializer_recebido = serializers.DepositoSerializer(data=request.data)
+        serializer_recebido = DepositoSerializer(data=request.data)
 
-        if serializer_recebido.is_valid() and conta:
+        if conta and serializer_recebido.is_valid():
             valor_depositado = decimal.Decimal(serializer_recebido.validated_data.get('value'))
-            saldo = decimal.Decimal(conta.saldo)
-            conta.saldo = saldo + valor_depositado
+            saldo = decimal.Decimal(conta.conta_saldo)
+            novo_saldo = saldo + valor_depositado
+
+            conta.conta_saldo = novo_saldo
             conta.save()
 
-            return Response({"saldo": conta.saldo}, status=status_HTTP_200_OK)
-        return Response(serializer_recebido.errors, status=status_HTTP_400_BAD_REQUEST)
+            return Response({"saldo": conta.conta_saldo}, status=status.HTTP_201_CREATED)
+        else:
+            return Response(serializer_recebido.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({'message': "Conta não encontrada"}, status=status.HTTP_404_NOT_FOUND)
+
 
 class CartaoView(ModelViewSet):
     queryset = Cartao.objects.all()
