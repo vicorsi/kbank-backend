@@ -163,34 +163,34 @@ class ContaView(ModelViewSet):
             conta_destino_id = serializer.validated_data.get('conta_id_destino')
             valor_transferencia = Decimal(serializer.validated_data.get('valor'))
 
-            try:
-                conta_origem = Conta.objects.get(id=conta_origem_id)
-                conta_destino = Conta.objects.get(id=conta_destino_id)
-            except Conta.DoesNotExist:
-                return Response({'message': 'Conta não encontrada'}, status=status.HTTP_404_NOT_FOUND)
+            conta_origem = Conta.objects.filter(id=conta_origem_id).first()
+            conta_destino = Conta.objects.filter(id=conta_destino_id).first()
 
-            if conta_origem.conta_saldo >= valor_transferencia:
-                conta_origem.conta_saldo -= valor_transferencia
-                conta_destino.conta_saldo += valor_transferencia
+            if conta_origem and conta_destino:
+                if conta_origem.conta_saldo >= valor_transferencia:
+                    conta_origem.conta_saldo -= valor_transferencia
+                    conta_destino.conta_saldo += valor_transferencia
 
-                conta_origem.save()
-                conta_destino.save()
+                    conta_origem.save()
+                    conta_destino.save()
 
-                Transferencia.objects.create(
-                    conta_id_origem=conta_origem,
-                    conta_id_destino=conta_destino,
-                    valor=valor_transferencia,
-                    observacao=serializer.validated_data.get('observacao', ''),
-                    tipo_transferencia=serializer.validated_data.get('tipo_transferencia', '')
-                )
+                    Transferencia.objects.create(
+                        conta_id_origem=conta_origem.id,
+                        conta_id_destino=conta_destino.id,
+                        valor=valor_transferencia,
+                        observacao=serializer.validated_data.get('observacao', ''),
+                        tipo_transferencia=serializer.validated_data.get('tipo_transferencia', '')
+                    )
 
-                return Response({'message': 'Transferência realizada com sucesso'}, status=status.HTTP_200_OK)
+                    return Response({'message': 'Transferência realizada com sucesso'}, status=status.HTTP_200_OK)
 
+                else:
+                    return Response({'message': 'Saldo insuficiente na conta de origem'}, status=status.HTTP_403_FORBIDDEN)
             else:
-                return Response({'message': 'Saldo insuficiente na conta de origem'}, status=status.HTTP_403_FORBIDDEN)
-
+                return Response({'message': 'Contas não encontradas'}, status=status.HTTP_404_NOT_FOUND)
         else:
             return Response({'message': 'Erro na requisição de transferência'}, status=status.HTTP_400_BAD_REQUEST)
+
 
 class CartaoView(ModelViewSet):
     queryset = Cartao.objects.all()
