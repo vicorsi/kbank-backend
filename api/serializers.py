@@ -110,3 +110,9 @@ class SaqueSerializer(serializers.Serializer):
 
     class Meta:
         fields = ['value']
+
+class TransferenciaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Transferencia
+        fields = '__all__'
+        many = True

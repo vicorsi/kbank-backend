@@ -2,7 +2,10 @@ from django.shortcuts import render
 from .models import *
 from .serializers import *
 
+from .serializers import SaqueSerializer
+
 import random
+import decimal
 
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
@@ -70,11 +73,12 @@ class ContaView(ModelViewSet):
     authentication_classes = [authenticationJWT.JWTAuthentication]
 
     permission_classes = [IsAuthenticated]
+    serializer_class = ContaSerializer
 
     def get_queryset(self):
         queryset = self.queryset
         return queryset.filter(
-            user=self.request.user
+            cliente_id=self.request.user
         ).order_by('-created_at').distinct()
     
     def get_serializer_class(self):
@@ -88,12 +92,16 @@ class ContaView(ModelViewSet):
         if serializer.is_valid():
             agencia = '9090'
             numero = ''
+            saldo = 0
+            conta_tipo = 'Standart'
             for i in range(8):
                 numero += str(random.randint(0,9))
             conta = Conta(
-                cliente_id = self.request.user,
-                numero = numero,
-                agencia = agencia,
+                cliente_id=self.request.user,
+                conta_agencia=agencia,
+                conta_numero=numero,
+                conta_saldo=saldo,
+                conta_tipo=conta_tipo   
             )
 
             conta.saldo = decimal.Decimal(0)
@@ -107,9 +115,9 @@ class ContaView(ModelViewSet):
     def sacar(self, request, pk=None):
         conta = Conta.objects.filter(id=pk).first()
 
-        serializer_recebido = serializers.SaqueSerializer(data=request.data)
+        serializer_recebido = SaqueSerializer(data=request.data)
         if serializer_recebido.is_valid() and conta:
-            valor_saque = decimal.Decimal(serializer_recebido.validated.data.get('value'))
+            valor_saque = decimal.Decimal(serializer_recebido.validated_data.get('value'))
             saldo = decimal.Decimal(conta.saldo)
 
             cmp = saldo.compare(valor_saque)
@@ -122,8 +130,9 @@ class ContaView(ModelViewSet):
                 conta.save()
 
                 return Response({"saldo": conta.saldo}, status=status.HTTP_201_OK)
-            return Response({'message': "Saldo insufficient"}, status=status.HTTP_403_FORBIDDEN)
+            return Response({'message': "Saldo insuficiente"}, status=status.HTTP_403_FORBIDDEN)
         return Response(serializer_recebido.errors, status=status.HTTP_400_BAD_REQUEST)
+
     
 
     @action(methods=['POST'], detail=True, url_path='depositar')
