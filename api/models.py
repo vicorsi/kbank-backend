@@ -103,11 +103,12 @@ class Cartao(models.Model):
 
 
 class Transferencia(models.Model):
-    conta_id_origem = models.ForeignKey(Conta, on_delete=models.CASCADE, related_name='conta_id_origem')
-    conta_id_destino = models.ForeignKey(Conta, on_delete=models.CASCADE, related_name='conta_id_destino')
-    valor = models.FloatField(max_length=20, blank=False, null=False)
+    conta_id_origem = models.ForeignKey(Conta, on_delete=models.CASCADE, related_name='conta_origem')
+    conta_id_destino = models.ForeignKey(Conta, on_delete=models.CASCADE, related_name='conta_destino')
+    valor = models.FloatField()
     observacao = models.TextField(max_length=100, blank=True)
     tipo_transferencia = models.CharField(max_length=20)
+
 
 
 class Movimentacao(models.Model):

@@ -1,4 +1,5 @@
 from django.shortcuts import render
+from django.shortcuts import get_object_or_404
 from .models import *
 from .serializers import *
 from decimal import Decimal
@@ -140,57 +141,92 @@ class ContaView(ModelViewSet):
         conta = Conta.objects.filter(id=pk).first()
         serializer_recebido = DepositoSerializer(data=request.data)
 
-        if conta and serializer_recebido.is_valid():
-            valor_depositado = decimal.Decimal(serializer_recebido.validated_data.get('value'))
-            saldo = decimal.Decimal(conta.conta_saldo)
-            novo_saldo = saldo + valor_depositado
+        if conta:
+            if serializer_recebido.is_valid():
+                valor_depositado = decimal.Decimal(serializer_recebido.validated_data.get('value'))
+                saldo = decimal.Decimal(conta.conta_saldo)
+                novo_saldo = saldo + valor_depositado
 
-            conta.conta_saldo = novo_saldo
-            conta.save()
+                conta.conta_saldo = novo_saldo
+                conta.save()
 
-            return Response({"saldo": conta.conta_saldo}, status=status.HTTP_201_CREATED)
-        else:
-            return Response(serializer_recebido.errors, status=status.HTTP_400_BAD_REQUEST)
-
-        return Response({'message': "Conta não encontrada"}, status=status.HTTP_404_NOT_FOUND)
-
-
-    @action(methods=['POST'], detail=False, url_path='transferir')
-    def transferir(self, request):
-        serializer = TransferenciaSerializer(data=request.data)
-        if serializer.is_valid():
-            conta_origem_id = serializer.validated_data.get('conta_id_origem')
-            conta_destino_id = serializer.validated_data.get('conta_id_destino')
-            valor_transferencia = Decimal(serializer.validated_data.get('valor'))
-
-            conta_origem = Conta.objects.filter(id=conta_origem_id).first()
-            conta_destino = Conta.objects.filter(id=conta_destino_id).first()
-
-            if conta_origem and conta_destino:
-                if conta_origem.conta_saldo >= valor_transferencia:
-                    conta_origem.conta_saldo -= valor_transferencia
-                    conta_destino.conta_saldo += valor_transferencia
-
-                    conta_origem.save()
-                    conta_destino.save()
-
-                    Transferencia.objects.create(
-                        conta_id_origem=conta_origem.id,
-                        conta_id_destino=conta_destino.id,
-                        valor=valor_transferencia,
-                        observacao=serializer.validated_data.get('observacao', ''),
-                        tipo_transferencia=serializer.validated_data.get('tipo_transferencia', '')
-                    )
-
-                    return Response({'message': 'Transferência realizada com sucesso'}, status=status.HTTP_200_OK)
-
-                else:
-                    return Response({'message': 'Saldo insuficiente na conta de origem'}, status=status.HTTP_403_FORBIDDEN)
+                return Response({"saldo": conta.conta_saldo}, status=status.HTTP_201_CREATED)
             else:
-                return Response({'message': 'Contas não encontradas'}, status=status.HTTP_404_NOT_FOUND)
+                return Response(serializer_recebido.errors, status=status.HTTP_400_BAD_REQUEST)
         else:
-            return Response({'message': 'Erro na requisição de transferência'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'message': "Conta não encontrada"}, status=status.HTTP_404_NOT_FOUND)
 
+
+    @action(methods=['POST'], detail=True, url_path='transferir')
+    def transferir(self, request, pk=None):
+        # Obtém a conta de destino usando o ID fornecido na URL
+        conta_destino = get_object_or_404(Conta, id=pk)
+
+        # Obtém a conta de origem do usuário autenticado
+        conta_origem = self.request.user.conta_set.first()
+
+        valor_transferencia = Decimal(request.data.get('valor', 0))
+
+        if conta_origem and conta_destino:
+            if conta_origem.conta_saldo >= valor_transferencia:
+                # Convertendo a conta_saldo para Decimal antes da subtração
+                conta_origem.conta_saldo = Decimal(str(conta_origem.conta_saldo)) - valor_transferencia
+
+                # Convertendo a conta_saldo para Decimal antes da adição
+                conta_destino.conta_saldo = Decimal(str(conta_destino.conta_saldo)) + valor_transferencia
+
+                conta_origem.save()
+                conta_destino.save()
+
+                Transferencia.objects.create(
+                    conta_id_origem=conta_origem,
+                    conta_id_destino=conta_destino,
+                    valor=valor_transferencia,
+                    observacao=request.data.get('observacao', ''),
+                    tipo_transferencia=request.data.get('tipo_transferencia', '')
+                )
+
+                return Response({'message': 'Transferência realizada com sucesso'}, status=status.HTTP_200_OK)
+            else:
+                return Response({'message': 'Saldo insuficiente na conta de origem'}, status=status.HTTP_403_FORBIDDEN)
+        else:
+            return Response({'message': 'Contas não encontradas'}, status=status.HTTP_404_NOT_FOUND) 
+        
+
+    @action(methods=['POST'], detail=True, url_path='emprestar')
+    def emprestar(self, request, pk=None):
+        conta = Conta.objects.filter(id=pk).first()
+
+        if conta:
+            serializer = EmprestimoSerializer(data=request.data)
+
+            if serializer.is_valid():
+                valor_emprestimo = decimal.Decimal(serializer.validated_data.get('emprestimo_valor'))
+                juros_emprestimo = decimal.Decimal(serializer.validated_data.get('emprestimo_juros'))
+                quantidade_parcelas = serializer.validated_data.get('emprestimo_quantidade_parcelas')
+                observacao = serializer.validated_data.get('emprestimo_observacao', '')
+
+                if conta.conta_saldo >= valor_emprestimo:
+                    with transaction.atomic():
+                        conta.conta_saldo -= valor_emprestimo
+                        conta.save()
+
+                        Emprestimo.objects.create(
+                            conta_id=conta,
+                            emprestimo_valor=valor_emprestimo,
+                            emprestimo_juros=juros_emprestimo,
+                            emprestimo_quantidade_parcelas=quantidade_parcelas,
+                            emprestimo_observacao=observacao
+                        )
+
+                    return Response({'message': 'Empréstimo realizado com sucesso'}, status=status.HTTP_200_OK)
+                else:
+                    return Response({'message': 'Saldo insuficiente para realizar o empréstimo'},
+                                    status=status.HTTP_403_FORBIDDEN)
+
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({'message': 'Conta não encontrada'}, status=status.HTTP_404_NOT_FOUND)
 
 class CartaoView(ModelViewSet):
     queryset = Cartao.objects.all()
