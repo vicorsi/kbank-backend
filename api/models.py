@@ -134,3 +134,12 @@ class Investimento(models.Model):
     investimento_aporte = models.FloatField(blank=False, null=False)
     investimento_prazo = models.DateField(blank=True)
     investimento_observacao = models.TextField(max_length=100)
+
+class Extrato(models.Model):
+    conta_id = models.ForeignKey('Conta', on_delete=models.CASCADE)
+    data_transacao = models.DateTimeField(auto_now_add=True)
+    tipo_transacao = models.CharField(max_length=20)
+    valor = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def __str__(self):
+        return f"{self.conta_id} - {self.tipo_transacao} - {self.data_transacao}"
