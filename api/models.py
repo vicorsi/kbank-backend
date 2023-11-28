@@ -111,8 +111,6 @@ class Transferencia(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
 
 
-
-
 class Movimentacao(models.Model):
     id = models.AutoField(primary_key=True)
     conta_id = models.ForeignKey(Conta, on_delete=models.CASCADE)

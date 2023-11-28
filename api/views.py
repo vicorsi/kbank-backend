@@ -232,6 +232,15 @@ class MovimentacaoView(ModelViewSet):
     queryset = Movimentacao.objects.all()
     serializer_class = MovimentacaoSerializer
 
+    def get_queryset(self):
+        usuario = self.request.user
+        transferencias = Transferencia.objects.filter(conta_id_origem__cliente_id=usuario) | Transferencia.objects.filter(conta_id_destino__cliente_id=usuario)
+        saques = Movimentacao.objects.filter(tipo_movimentacao='saque', conta_id__cliente_id=usuario)
+        depositos = Movimentacao.objects.filter(tipo_movimentacao='deposito', conta_id__cliente_id=usuario)
+
+        queryset = transferencias | saques | depositos
+        return queryset
+
 
 class EmprestimoView(ModelViewSet):
     queryset = Emprestimo.objects.all()
@@ -260,15 +269,9 @@ class ExtratoView(APIView):
     def get(self, request):
         usuario = request.user
 
-        movimentacoes = Movimentacao.objects.filter(conta_id__cliente_id=usuario)
         emprestimos = Emprestimo.objects.filter(conta_id__cliente_id=usuario)
 
         ultima_data_extrato = Extrato.objects.filter(conta_id__cliente_id=usuario).order_by('-created_at').first()
-
-        for movimentacao in movimentacoes:
-            if not ultima_data_extrato or movimentacao.created_at > ultima_data_extrato.created_at:
-                tipo_transacao = 'Saque' if movimentacao.tipo_movimentacao == 'saque' else 'Deposito'
-                Extrato.objects.create(conta_id=movimentacao.conta_id, tipo_transacao=tipo_transacao, valor=movimentacao.movimentacao_valor)
 
         for emprestimo in emprestimos:
             if not ultima_data_extrato or emprestimo.created_at > ultima_data_extrato.created_at:
