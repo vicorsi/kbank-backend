@@ -1,5 +1,6 @@
 from django.shortcuts import render
 from django.shortcuts import get_object_or_404
+from django.db import transaction
 from .models import *
 from .serializers import *
 from decimal import Decimal
@@ -159,20 +160,16 @@ class ContaView(ModelViewSet):
 
     @action(methods=['POST'], detail=True, url_path='transferir')
     def transferir(self, request, pk=None):
-        # Obtém a conta de destino usando o ID fornecido na URL
         conta_destino = get_object_or_404(Conta, id=pk)
 
-        # Obtém a conta de origem do usuário autenticado
         conta_origem = self.request.user.conta_set.first()
 
         valor_transferencia = Decimal(request.data.get('valor', 0))
 
         if conta_origem and conta_destino:
             if conta_origem.conta_saldo >= valor_transferencia:
-                # Convertendo a conta_saldo para Decimal antes da subtração
                 conta_origem.conta_saldo = Decimal(str(conta_origem.conta_saldo)) - valor_transferencia
 
-                # Convertendo a conta_saldo para Decimal antes da adição
                 conta_destino.conta_saldo = Decimal(str(conta_destino.conta_saldo)) + valor_transferencia
 
                 conta_origem.save()
@@ -201,32 +198,29 @@ class ContaView(ModelViewSet):
             serializer = EmprestimoSerializer(data=request.data)
 
             if serializer.is_valid():
-                valor_emprestimo = decimal.Decimal(serializer.validated_data.get('emprestimo_valor'))
-                juros_emprestimo = decimal.Decimal(serializer.validated_data.get('emprestimo_juros'))
+                valor_emprestimo = Decimal(serializer.validated_data.get('emprestimo_valor'))
+                juros_emprestimo = Decimal(serializer.validated_data.get('emprestimo_juros'))
                 quantidade_parcelas = serializer.validated_data.get('emprestimo_quantidade_parcelas')
                 observacao = serializer.validated_data.get('emprestimo_observacao', '')
 
-                if conta.conta_saldo >= valor_emprestimo:
-                    with transaction.atomic():
-                        conta.conta_saldo -= valor_emprestimo
-                        conta.save()
+                with transaction.atomic():
+                    conta.conta_saldo = float(conta.conta_saldo) + float(valor_emprestimo)
+                    conta.save()
 
-                        Emprestimo.objects.create(
-                            conta_id=conta,
-                            emprestimo_valor=valor_emprestimo,
-                            emprestimo_juros=juros_emprestimo,
-                            emprestimo_quantidade_parcelas=quantidade_parcelas,
-                            emprestimo_observacao=observacao
-                        )
+                    Emprestimo.objects.create(
+                        conta_id=conta,
+                        emprestimo_valor=float(valor_emprestimo),
+                        emprestimo_juros=float(juros_emprestimo),
+                        emprestimo_quantidade_parcelas=quantidade_parcelas,
+                        emprestimo_observacao=observacao
+                    )
 
-                    return Response({'message': 'Empréstimo realizado com sucesso'}, status=status.HTTP_200_OK)
-                else:
-                    return Response({'message': 'Saldo insuficiente para realizar o empréstimo'},
-                                    status=status.HTTP_403_FORBIDDEN)
-
+                return Response({'message': 'Empréstimo realizado com sucesso'}, status=status.HTTP_200_OK)
+            
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         return Response({'message': 'Conta não encontrada'}, status=status.HTTP_404_NOT_FOUND)
+
 
 class CartaoView(ModelViewSet):
     queryset = Cartao.objects.all()
