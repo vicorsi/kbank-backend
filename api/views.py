@@ -263,12 +263,16 @@ class ExtratoView(APIView):
         movimentacoes = Movimentacao.objects.filter(conta_id__cliente_id=usuario)
         emprestimos = Emprestimo.objects.filter(conta_id__cliente_id=usuario)
 
+        ultima_data_extrato = Extrato.objects.filter(conta_id__cliente_id=usuario).order_by('-created_at').first()
+
         for movimentacao in movimentacoes:
-            tipo_transacao = 'Saque' if movimentacao.tipo_movimentacao == 'saque' else 'Deposito'
-            Extrato.objects.create(conta_id=movimentacao.conta_id, tipo_transacao=tipo_transacao, valor=movimentacao.movimentacao_valor)
+            if not ultima_data_extrato or movimentacao.created_at > ultima_data_extrato.created_at:
+                tipo_transacao = 'Saque' if movimentacao.tipo_movimentacao == 'saque' else 'Deposito'
+                Extrato.objects.create(conta_id=movimentacao.conta_id, tipo_transacao=tipo_transacao, valor=movimentacao.movimentacao_valor)
 
         for emprestimo in emprestimos:
-            Extrato.objects.create(conta_id=emprestimo.conta_id, tipo_transacao='Emprestimo', valor=emprestimo.emprestimo_valor)
+            if not ultima_data_extrato or emprestimo.created_at > ultima_data_extrato.created_at:
+                Extrato.objects.create(conta_id=emprestimo.conta_id, tipo_transacao='Emprestimo', valor=emprestimo.emprestimo_valor)
 
         extrato = Extrato.objects.filter(conta_id__cliente_id=usuario)
 

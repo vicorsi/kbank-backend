@@ -108,6 +108,8 @@ class Transferencia(models.Model):
     valor = models.FloatField()
     observacao = models.TextField(max_length=100, blank=True)
     tipo_transferencia = models.CharField(max_length=20)
+    created_at = models.DateTimeField(default=timezone.now)
+
 
 
 
@@ -126,6 +128,7 @@ class Emprestimo(models.Model):
     emprestimo_juros = models.FloatField(blank=False, null=False)
     emprestimo_quantidade_parcelas = models.IntegerField(blank=False, null=False)
     emprestimo_observacao = models.TextField(max_length=100)
+    created_at = models.DateTimeField(default=timezone.now)
 
 
 class Investimento(models.Model):
@@ -140,6 +143,7 @@ class Extrato(models.Model):
     data_transacao = models.DateTimeField(auto_now_add=True)
     tipo_transacao = models.CharField(max_length=20)
     valor = models.DecimalField(max_digits=10, decimal_places=2)
+    created_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
         return f"{self.conta_id} - {self.tipo_transacao} - {self.data_transacao}"
