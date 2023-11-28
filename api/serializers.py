@@ -111,7 +111,14 @@ class SaqueSerializer(serializers.Serializer):
     class Meta:
         fields = ['value']
 
+
 class TransferenciaSerializer(serializers.ModelSerializer): 
     class Meta:
         model = Transferencia
         fields = ['conta_id_origem', 'conta_id_destino', 'valor', 'observacao', 'tipo_transferencia']
+
+
+class ExtratoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Extrato
+        fields = '__all__'
