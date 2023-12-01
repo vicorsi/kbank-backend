@@ -28,7 +28,7 @@ class UsuarioManager(BaseUserManager):
 
         return self.create_user(email, password, **extra_fields)
 
-class Usuario(AbstractBaseUser, PermissionsMixin):
+class Usuario(AbstractBaseUser):
     email = models.EmailField(max_length=255, unique=True)
     first_name = models.CharField(max_length=255, null=False)
     last_name = models.CharField(max_length=255, null=False)
@@ -37,13 +37,19 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     created_at = models.DateTimeField(default=timezone.now)
-
+    is_superuser = models.BooleanField(default=False)
     objects = UsuarioManager()
 
     USERNAME_FIELD = 'email'
 
     def __str__(self) -> str:
         return f'{self.first_name} {self.last_name}'
+    
+    def has_perm(self, obj):
+        return True
+    
+    def has_module_perms(self, app_label):
+        return self.is_superuser
 
 class Endereco(models.Model):
     id = models.AutoField(primary_key=True)

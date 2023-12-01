@@ -21,7 +21,6 @@ from rest_framework import (
 )
 from rest_framework_simplejwt import authentication as authenticationJWT
 from .serializers import UsuarioSerializer
-from .permissions import IsCreationOrIsAuthenticated
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt import authentication as authenticationJWT
@@ -33,7 +32,7 @@ class CreateUserView(generics.CreateAPIView):
 class ManagerUserAPiView(generics.RetrieveUpdateAPIView, generics.CreateAPIView):
     serializer_class = UsuarioSerializer
     authentication_classes = [authenticationJWT.JWTAuthentication]
-    permission_classes = [IsCreationOrIsAuthenticated]
+   
 
     def get_object(self):
         return self.request.user
