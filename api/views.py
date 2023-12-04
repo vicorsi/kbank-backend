@@ -255,15 +255,9 @@ class TransferenciaView(ModelViewSet):
     queryset = Transferencia.objects.all()
     serializer_class = TransferenciaSerializer
 
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
-from .models import Extrato, Movimentacao, Emprestimo
-from .serializers import ExtratoSerializer
-
 class ExtratoView(APIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = ExtratoSerializer  # Specify the serializer class
 
     def get(self, request):
         usuario = request.user
@@ -278,7 +272,6 @@ class ExtratoView(APIView):
 
         extrato = Extrato.objects.filter(conta_id__cliente_id=usuario)
 
-        extrato_serializado = ExtratoSerializer(extrato, many=True).data
+        extrato_serializado = self.serializer_class(extrato, many=True).data
 
         return Response({'extrato': extrato_serializado}, status=status.HTTP_200_OK)
-
