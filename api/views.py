@@ -32,7 +32,6 @@ class CreateUserView(generics.CreateAPIView):
 class ManagerUserAPiView(generics.RetrieveUpdateAPIView, generics.CreateAPIView):
     serializer_class = UsuarioSerializer
     authentication_classes = [authenticationJWT.JWTAuthentication]
-   
 
     def get_object(self):
         return self.request.user
