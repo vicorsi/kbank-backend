@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from django.shortcuts import get_object_or_404
 from django.db import transaction
+from django.db.models import Q
 from .models import *
 from .serializers import *
 from decimal import Decimal
@@ -220,6 +221,59 @@ class ContaView(ModelViewSet):
 
         return Response({'message': 'Conta não encontrada'}, status=status.HTTP_404_NOT_FOUND)
 
+    @action(methods=['POST'], detail=True, url_path='cartao')
+    def criarCartao(self, request, pk=None):
+        conta = Conta.objects.filter(id=pk).first()
+
+        if not conta:
+            return Response({'error': 'Conta não encontrada'}, status=status.HTTP_404_NOT_FOUND)
+
+        if conta.conta_saldo <= 1000:
+            return Response({'error': 'Saldo insuficiente para criar um cartão'}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = CartaoSerializer(data=request.data)
+
+        if serializer.is_valid():
+            cartao_numero = ''.join(str(random.randint(0, 9)) for _ in range(16))
+            cartao_cvv = ''.join(str(random.randint(0, 9)) for _ in range(3))
+            cartao_validade = '2025-12-07'
+            cartao_bandeira = 'Mastercard'
+
+            with transaction.atomic():
+                conta.conta_saldo -= 1000
+                conta.save()
+
+                cartao = Cartao(
+                    conta_id=conta,
+                    cartao_numero=cartao_numero,
+                    cartao_cvv=cartao_cvv,
+                    cartao_validade=cartao_validade,
+                    cartao_bandeira=cartao_bandeira
+                )
+
+                cartao.save()
+
+            return Response({'success': 'Cartão criado'}, status=status.HTTP_201_CREATED)
+
+        return Response({'error': 'Invalid data', 'details': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(methods=['GET'], detail=True, url_path='get/cartao')
+    def obterCartao(self, request, pk=None):
+        conta = Conta.objects.filter(id=pk).first()
+
+        if not conta:
+            return Response({'error': 'Conta não encontrada'}, status=status.HTTP_404_NOT_FOUND)
+
+        cartao = Cartao.objects.filter(conta_id=conta).first()
+
+        if not cartao:
+            return Response({'error': 'Cartão não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = CartaoSerializer(cartao)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+
 
 class CartaoView(ModelViewSet):
     queryset = Cartao.objects.all()
@@ -230,14 +284,6 @@ class MovimentacaoView(ModelViewSet):
     queryset = Movimentacao.objects.all()
     serializer_class = MovimentacaoSerializer
 
-    def get_queryset(self):
-        usuario = self.request.user
-        transferencias = Transferencia.objects.filter(conta_id_origem__cliente_id=usuario) | Transferencia.objects.filter(conta_id_destino__cliente_id=usuario)
-        saques = Movimentacao.objects.filter(tipo_movimentacao='saque', conta_id__cliente_id=usuario)
-        depositos = Movimentacao.objects.filter(tipo_movimentacao='deposito', conta_id__cliente_id=usuario)
-
-        queryset = transferencias | saques | depositos
-        return queryset
 
 
 class EmprestimoView(ModelViewSet):
@@ -256,21 +302,62 @@ class TransferenciaView(ModelViewSet):
 
 class ExtratoView(APIView):
     permission_classes = [IsAuthenticated]
-    serializer_class = ExtratoSerializer  # Specify the serializer class
+    serializer_class = ExtratoSerializer
 
     def get(self, request):
         usuario = request.user
 
         emprestimos = Emprestimo.objects.filter(conta_id__cliente_id=usuario)
-
+        transferencias_origem = Transferencia.objects.filter(conta_id_origem__cliente_id=usuario)
+        transferencias_destino = Transferencia.objects.filter(conta_id_destino__cliente_id=usuario)
+        saques = Movimentacao.objects.filter(movimentacao_observacao='Saque', conta_id__cliente_id=usuario)
+        depositos = Movimentacao.objects.filter(movimentacao_observacao='Depósito', conta_id__cliente_id=usuario)
+        
         ultima_data_extrato = Extrato.objects.filter(conta_id__cliente_id=usuario).order_by('-created_at').first()
 
         for emprestimo in emprestimos:
             if not ultima_data_extrato or emprestimo.created_at > ultima_data_extrato.created_at:
-                Extrato.objects.create(conta_id=emprestimo.conta_id, tipo_transacao='Emprestimo', valor=emprestimo.emprestimo_valor)
+                Extrato.objects.create(
+                    conta_id=emprestimo.conta_id,
+                    tipo_transacao='Emprestimo',
+                    valor=emprestimo.emprestimo_valor
+                )
+
+        for transferencia_origem in transferencias_origem:
+            if not ultima_data_extrato or transferencia_origem.created_at > ultima_data_extrato.created_at:
+                Extrato.objects.create(
+                    conta_id=transferencia_origem.conta_id_origem,
+                    tipo_transacao='Transferência Entre Contas',
+                    valor=transferencia_origem.valor
+                )
+
+        for transferencia_destino in transferencias_destino:
+            if not ultima_data_extrato or transferencia_destino.created_at > ultima_data_extrato.created_at:
+                Extrato.objects.create(
+                    conta_id=transferencia_destino.conta_id_destino,
+                    tipo_transacao='Transferência Entre Contas',
+                    valor=transferencia_destino.valor
+                )
+
+        for saque in saques:
+            if not ultima_data_extrato or saque.created_at > ultima_data_extrato.created_at:
+                Extrato.objects.create(
+                    conta_id=saque.conta_id,
+                    tipo_transacao='Saque',
+                    valor=saque.movimentacao_valor,
+                    movimentacao_tipo='Saque'
+                )
+
+        for deposito in depositos:
+            if not ultima_data_extrato or deposito.created_at > ultima_data_extrato.created_at:
+                Extrato.objects.create(
+                    conta_id=deposito.conta_id,
+                    tipo_transacao='Depósito',
+                    valor=deposito.movimentacao_valor,
+                    movimentacao_tipo='Depósito'
+                )
 
         extrato = Extrato.objects.filter(conta_id__cliente_id=usuario)
-
         extrato_serializado = self.serializer_class(extrato, many=True).data
 
         return Response({'extrato': extrato_serializado}, status=status.HTTP_200_OK)

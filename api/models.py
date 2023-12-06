@@ -98,11 +98,11 @@ class Conta(models.Model):
 
 class Cartao(models.Model):
     id = models.AutoField(primary_key=True)
-    conta_id = models.ForeignKey(Conta, on_delete=models.CASCADE)
-    cartao_numero = models.CharField(max_length=19, blank=False, null=False, unique=True)
+    conta_id = models.ForeignKey(Conta, on_delete=models.CASCADE, related_name='conta_id')
+    cartao_numero = models.CharField(max_length=16, blank=False, null=False, unique=True)
     cartao_cvv = models.CharField(max_length=3, blank=False, null=False)
-    cartao_validade = models.DateField(blank=False, null=False)
-    cartao_bandeira = models.CharField(max_length=20, blank=False, null=False)
+    cartao_validade = models.DateField(blank=True, null=True)
+    cartao_bandeira = models.CharField(max_length=20, blank=False, null=False, default='Mastercard')
 
     def __str__(self):
         return self.conta_id
@@ -123,6 +123,7 @@ class Movimentacao(models.Model):
     transferencia = models.ForeignKey(Transferencia, on_delete=models.CASCADE)
     movimentacao_valor = models.FloatField()
     movimentacao_observacao = models.TextField(max_length=100)
+    movimentacao_tipo = models.CharField(max_length=20)
     
 
 class Emprestimo(models.Model):
@@ -148,6 +149,7 @@ class Extrato(models.Model):
     tipo_transacao = models.CharField(max_length=20)
     valor = models.DecimalField(max_digits=10, decimal_places=2)
     created_at = models.DateTimeField(default=timezone.now)
+    
 
     def __str__(self):
         return f"{self.conta_id} - {self.tipo_transacao} - {self.data_transacao}"

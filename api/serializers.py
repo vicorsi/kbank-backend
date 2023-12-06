@@ -66,16 +66,13 @@ class ContaSerializer(serializers.ModelSerializer):
 
 class ContaDetailSerializer(serializers.ModelSerializer):
     class Meta(ContaSerializer.Meta):   
-        fields = ['id', 'conta_saldo', 'conta_tipo', 'created_at',]
-        read_only_fields = ContaSerializer.Meta.read_only_fields + ['id', 'conta_saldo', 'conta_tipo', 'created_at',]
-
+        fields = ['id', 'conta_saldo', 'conta_tipo', 'created_at', 'conta_numero',]
+        read_only_fields = ContaSerializer.Meta.read_only_fields + ['id', 'conta_saldo', 'conta_tipo', 'created_at', 'conta_numero',]
 
 class CartaoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Cartao
         fields = '__all__'
-        many = True
-
 
 class MovimentacaoSerializer(serializers.ModelSerializer):
     class Meta:
@@ -121,4 +118,4 @@ class TransferenciaSerializer(serializers.ModelSerializer):
 class ExtratoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Extrato
-        fields = '__all__'
+        fields = ['conta_id', 'tipo_transacao', 'valor', 'created_at']
