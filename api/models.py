@@ -103,6 +103,7 @@ class Cartao(models.Model):
     cartao_cvv = models.CharField(max_length=3, blank=False, null=False)
     cartao_validade = models.DateField(blank=True, null=True)
     cartao_bandeira = models.CharField(max_length=20, blank=False, null=False, default='Mastercard')
+    cartao_saldo = models.FloatField(max_length=20, default=0.00, null=False, blank=False)
 
     def __str__(self):
         return self.conta_id
@@ -130,7 +131,6 @@ class Emprestimo(models.Model):
     id = models.AutoField(primary_key=True)
     conta_id = models.ForeignKey(Conta, on_delete=models.CASCADE)
     emprestimo_valor = models.FloatField(blank=False, null=False)
-    emprestimo_juros = models.FloatField(blank=False, null=False)
     emprestimo_quantidade_parcelas = models.IntegerField(blank=False, null=False)
     emprestimo_observacao = models.TextField(max_length=100)
     created_at = models.DateTimeField(default=timezone.now)

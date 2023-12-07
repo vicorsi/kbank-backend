@@ -199,7 +199,6 @@ class ContaView(ModelViewSet):
 
             if serializer.is_valid():
                 valor_emprestimo = Decimal(serializer.validated_data.get('emprestimo_valor'))
-                juros_emprestimo = Decimal(serializer.validated_data.get('emprestimo_juros'))
                 quantidade_parcelas = serializer.validated_data.get('emprestimo_quantidade_parcelas')
                 observacao = serializer.validated_data.get('emprestimo_observacao', '')
 
@@ -210,7 +209,6 @@ class ContaView(ModelViewSet):
                     Emprestimo.objects.create(
                         conta_id=conta,
                         emprestimo_valor=float(valor_emprestimo),
-                        emprestimo_juros=float(juros_emprestimo),
                         emprestimo_quantidade_parcelas=quantidade_parcelas,
                         emprestimo_observacao=observacao
                     )
@@ -273,6 +271,37 @@ class ContaView(ModelViewSet):
 
         return Response(serializer.data, status=status.HTTP_200_OK)
     
+    @action(methods=['POST'], detail=True, url_path='comprar/credito')
+    def realizar_compra(self, request, pk=None):
+        conta = Conta.objects.filter(id=pk).first()
+
+        if not conta:
+            return Response({'message': 'Conta não encontrada'}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = RealizarCompraSerializer(data=request.data)
+
+        if serializer.is_valid():
+            valor_compra = Decimal(serializer.validated_data.get('valor'))
+
+            cartao = Cartao.objects.filter(conta_id=conta).first()
+
+            if not cartao:
+                return Response({'error': 'Cartão não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
+            cartao.cartao_saldo -= float(valor_compra)
+            cartao.save()
+
+            Extrato.objects.create(
+                conta_id=conta,
+                tipo_transacao='Compra',
+                valor=valor_compra,
+            )
+
+            return Response({'message': 'Compra realizada com sucesso'}, status=status.HTTP_200_OK)
+
+        return Response({'error': 'Dados inválidos', 'details': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+# ...
 
 
 class CartaoView(ModelViewSet):

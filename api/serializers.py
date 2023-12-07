@@ -119,3 +119,6 @@ class ExtratoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Extrato
         fields = ['conta_id', 'tipo_transacao', 'valor', 'created_at']
+
+class RealizarCompraSerializer(serializers.Serializer):
+    valor = serializers.DecimalField(max_digits=10, decimal_places=2)

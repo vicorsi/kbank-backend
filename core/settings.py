@@ -63,6 +63,7 @@ MIDDLEWARE = [
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:19006',
     'http://127.0.0.1:8000',
+    'http://10.109.71.5:8000'
 ]
 
 OPTIONS = {
