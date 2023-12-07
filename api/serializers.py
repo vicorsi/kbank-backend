@@ -116,9 +116,14 @@ class TransferenciaSerializer(serializers.ModelSerializer):
 
 
 class ExtratoSerializer(serializers.ModelSerializer):
+    created_at = serializers.SerializerMethodField()
     class Meta:
         model = Extrato
         fields = ['conta_id', 'tipo_transacao', 'valor', 'created_at']
+
+
+    def get_created_at(self, instance):
+        return instance.created_at.strftime('%d/%m/%Y %H:%M:%S')
 
 class RealizarCompraSerializer(serializers.Serializer):
     valor = serializers.DecimalField(max_digits=10, decimal_places=2)
